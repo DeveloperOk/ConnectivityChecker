@@ -18,43 +18,55 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.retain.retain
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.enterprise.connectivitychecker.ui.theme.ConnectivityCheckerTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.seconds
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-
-        val isInternetAvailable = MutableStateFlow(false)
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             ConnectivityCheckerTheme {
-                ConnectivityCheckerApp(isInternetAvailable = isInternetAvailable)
+                ConnectivityCheckerApp(content = { MainScreen() })
             }
         }
     }
 }
 
 @Composable
-fun ConnectivityCheckerApp(isInternetAvailable: MutableStateFlow<Boolean>) {
+fun ConnectivityCheckerApp(
+    mainViewModel: MainViewModel = viewModel(),
+    content: @Composable () -> Unit
+) {
 
     val oneTimeFlag = retain { mutableStateOf(true) }
 
-    val isInternetAvailableState = isInternetAvailable.collectAsStateWithLifecycle()
+    val isInternetAvailableState = mainViewModel.isInternetAvailable.collectAsStateWithLifecycle()
+
+    val showBackOnlineState = mainViewModel.showBackOnline.collectAsStateWithLifecycle()
+
+    //Triggers "Back Online" Text
+    val tempTrigger = retain(isInternetAvailableState.value){
+         if(isInternetAvailableState.value){
+             mainViewModel.showBackOnline.update { true }
+         }
+         true
+    }
+
 
     val context = LocalContext.current
 
@@ -70,11 +82,14 @@ fun ConnectivityCheckerApp(isInternetAvailable: MutableStateFlow<Boolean>) {
 
                 while (true){
 
-                    isInternetAvailable.update {
+                    val isInternetAvailableTemp =
                         InternetManager.isInternetAvailable(context = context)
+
+                    mainViewModel.isInternetAvailable.update {
+                        isInternetAvailableTemp
                     }
 
-                    delay(1000L)
+                    delay(1.seconds)
 
                 }
 
@@ -96,12 +111,9 @@ fun ConnectivityCheckerApp(isInternetAvailable: MutableStateFlow<Boolean>) {
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth().weight(1F)){
 
-                Text("Connectivity Manager")
-                Text("Text is shown when internet is lost")
-
+                content()
 
             }
-
 
             if(!isInternetAvailableState.value){
 
@@ -115,6 +127,35 @@ fun ConnectivityCheckerApp(isInternetAvailable: MutableStateFlow<Boolean>) {
 
                 }
 
+            }else{
+
+                if(showBackOnlineState.value){
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(5.dp).fillMaxWidth()
+                            .background(Color.Green, RoundedCornerShape(15.dp))
+                            .padding(5.dp)) {
+
+                        Text("Back Online")
+
+                        LaunchedEffect(showBackOnlineState.value) {
+                            if(showBackOnlineState.value){
+                                GlobalScope.launch(Dispatchers.Default) {
+
+                                    delay(2.seconds)
+
+                                    mainViewModel.showBackOnline.update { false }
+
+                                }
+                            }
+                        }
+
+                    }
+
+                }
+
+
             }
 
         }
@@ -122,3 +163,17 @@ fun ConnectivityCheckerApp(isInternetAvailable: MutableStateFlow<Boolean>) {
 
 }
 
+
+@Composable
+fun MainScreen(){
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize()){
+
+        Text("Connectivity Manager")
+        Text("Text is shown when internet is lost")
+
+    }
+
+}
