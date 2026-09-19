@@ -63,6 +63,8 @@ fun ConnectivityCheckerApp(isInternetAvailable: MutableStateFlow<Boolean>) {
 
             GlobalScope.launch(Dispatchers.Default) {
 
+                oneTimeFlag.value = false
+
                 while (true){
 
                     isInternetAvailable.update {
@@ -72,8 +74,6 @@ fun ConnectivityCheckerApp(isInternetAvailable: MutableStateFlow<Boolean>) {
                     delay(1000L)
 
                 }
-
-                oneTimeFlag.value = false
 
             }
 
