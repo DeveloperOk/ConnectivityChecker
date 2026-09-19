@@ -59,20 +59,13 @@ fun ConnectivityCheckerApp(
 
     val showBackOnlineState = mainViewModel.showBackOnline.collectAsStateWithLifecycle()
 
-    //Triggers "Back Online" Text
-    val tempTrigger = retain(isInternetAvailableState.value){
-         if(isInternetAvailableState.value){
-             mainViewModel.showBackOnline.update { true }
-         }
-         true
-    }
-
-
     val context = LocalContext.current
 
     if(oneTimeFlag.value){
 
         LaunchedEffect(true) {
+
+            var previousState: Boolean? = null
 
             GlobalScope.launch(Dispatchers.Default) {
 
@@ -82,12 +75,20 @@ fun ConnectivityCheckerApp(
 
                 while (true){
 
-                    val isInternetAvailableTemp =
-                        InternetManager.isInternetAvailable(context = context)
+                    val currentState =
+                        InternetManager.isInternetAvailable(context)
 
                     mainViewModel.isInternetAvailable.update {
-                        isInternetAvailableTemp
+                        currentState
                     }
+
+                    if (previousState == false && currentState) {
+                        mainViewModel.showBackOnline.update {
+                            true
+                        }
+                    }
+
+                    previousState = currentState
 
                     delay(1.seconds)
 
@@ -97,6 +98,18 @@ fun ConnectivityCheckerApp(
 
         }
 
+    }
+
+    LaunchedEffect(showBackOnlineState.value) {
+        if(showBackOnlineState.value){
+            GlobalScope.launch(Dispatchers.Default) {
+
+                delay(2.seconds)
+
+                mainViewModel.showBackOnline.update { false }
+
+            }
+        }
     }
 
 
@@ -138,18 +151,6 @@ fun ConnectivityCheckerApp(
                             .padding(5.dp)) {
 
                         Text("Back Online")
-
-                        LaunchedEffect(showBackOnlineState.value) {
-                            if(showBackOnlineState.value){
-                                GlobalScope.launch(Dispatchers.Default) {
-
-                                    delay(2.seconds)
-
-                                    mainViewModel.showBackOnline.update { false }
-
-                                }
-                            }
-                        }
 
                     }
 
