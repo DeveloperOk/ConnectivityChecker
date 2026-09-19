@@ -32,6 +32,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,7 +64,9 @@ fun ConnectivityCheckerApp(isInternetAvailable: MutableStateFlow<Boolean>) {
 
             GlobalScope.launch(Dispatchers.Default) {
 
-                oneTimeFlag.value = false
+                withContext(Dispatchers.Main){
+                    oneTimeFlag.value = false
+                }
 
                 while (true){
 
